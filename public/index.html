@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>math2big</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">∑</span> math2big</div>
+  <div class="top-actions">
+    <select id="model" aria-label="Modelo"></select>
+    <button id="theme" class="icon-btn" title="Alternar tema" aria-label="Alternar tema">◐</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="pane input-pane">
+    <label id="drop" class="drop" tabindex="0">
+      <input id="file" type="file" accept="image/*" hidden>
+      <div class="drop-empty">
+        <div class="drop-icon">⤓</div>
+        <p class="drop-title">Solte uma imagem aqui</p>
+        <p class="muted">ou clique para escolher · <kbd>Ctrl</kbd>+<kbd>V</kbd> para colar</p>
+      </div>
+      <img id="preview" alt="Imagem enviada" hidden>
+    </label>
+    <input id="hint" class="hint" type="text" placeholder="Contexto opcional (ex.: “cálculo II, integrais duplas”)">
+    <div class="row">
+      <button id="run" class="btn primary" disabled>Converter</button>
+      <button id="clear" class="btn ghost" disabled>Limpar</button>
+    </div>
+    <div class="history-head">
+      <h2>Histórico</h2>
+      <button id="clear-history" class="link">apagar</button>
+    </div>
+    <ul id="history" class="history"></ul>
+  </section>
+
+  <section class="pane output-pane">
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="render" role="tab">Visualizar</button>
+      <button class="tab" data-tab="source" role="tab">LaTeX</button>
+      <div class="spacer"></div>
+      <button id="copy-latex" class="btn small" disabled>Copiar LaTeX</button>
+      <button id="copy-md" class="btn small ghost" disabled>Copiar Markdown</button>
+    </div>
+    <div id="status" class="status" hidden></div>
+    <div id="render" class="render tab-panel">
+      <div class="placeholder">
+        <p class="big">$$\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}$$</p>
+        <p class="muted">O resultado aparece aqui. Clique em qualquer fórmula para copiar só ela.</p>
+      </div>
+    </div>
+    <div class="tab-panel source-wrap" hidden>
+      <textarea id="source" spellcheck="false" placeholder="O LaTeX reconhecido aparece aqui — e você pode editar."></textarea>
+      <p class="muted small-note">Edite à vontade: a visualização atualiza na hora.</p>
+    </div>
+    <footer id="meta" class="meta"></footer>
+  </section>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="/app.js"></script>
+</body>
+</html>

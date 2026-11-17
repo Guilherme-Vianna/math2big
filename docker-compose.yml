@@ -1,0 +1,10 @@
+services:
+  math2big:
+    build: .
+    image: math2big:latest
+    container_name: math2big
+    ports:
+      - "8765:8765"
+    env_file:
+      - .env          # GEMINI_API_KEY=... (e opcionalmente ANTHROPIC_API_KEY, MATH2BIG_MODEL)
+    restart: unless-stopped
