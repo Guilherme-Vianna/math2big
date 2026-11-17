@@ -8,12 +8,14 @@ Provedores suportados (usa o que tiver chave configurada):
 from __future__ import annotations
 
 import base64
+import json
 import os
 import re
 from functools import lru_cache
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -36,6 +38,7 @@ Output format (Markdown + LaTeX), nothing else:
 - Every formula, equation or expression goes in display math: $$ ... $$ on its own line.
 - Math that sits inside a sentence of prose on the same line (e.g. "Seja $f(x)=...$. Mostre que:") MUST stay inline with single dollars $ ... $ — never break a sentence with $$.
 - Prose (statements, "seja", "prove que", item labels like "a)", "1.") stays as plain text, in its original language.
+- Never put LaTeX commands in prose outside $...$. Circled or boxed item numbers (e.g. a circled 11) are written as plain text "(11)".
 - Multi-line derivations/systems: use \begin{aligned} ... \end{aligned} (align on = when the image does), cases, or matrices (pmatrix, bmatrix, vmatrix) as appropriate.
 - Use standard LaTeX that KaTeX can render: \frac, \sqrt[n]{}, \int_a^b, \sum, \prod, \lim_{x \to 0}, \partial, \nabla, \mathbb{R}, \mathcal{}, \vec{}, \hat{}, \overline{}, \binom, \left( \right), \operatorname{}, etc.
 - Preserve the original variable names, subscripts, superscripts, primes, and spacing intent.
@@ -151,6 +154,78 @@ def ocr_gemini(model: str, image: bytes, media_type: str, instruction: str) -> t
     return text, (usage.prompt_token_count or 0) if usage else 0, (usage.candidates_token_count or 0) if usage else 0
 
 
+def _gemini_config(thinking: bool):
+    from google.genai import types
+
+    return types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT,
+        temperature=0,
+        max_output_tokens=8192,
+        media_resolution=types.MediaResolution.MEDIA_RESOLUTION_HIGH,
+        thinking_config=types.ThinkingConfig(thinking_level="LOW") if thinking else None,
+    )
+
+
+def _gemini_error(e, model: str) -> str:
+    from google.genai import errors
+
+    if isinstance(e, errors.ClientError):
+        if e.code in (401, 403):
+            return "Chave do Gemini inválida ou sem permissão."
+        if e.code == 404:
+            return f"Modelo {model} não encontrado na sua conta."
+        if e.code == 429:
+            return "Limite do Gemini atingido (o plano gratuito tem cota por minuto). Tente em instantes ou troque o modelo."
+        return f"Gemini rejeitou a requisição: {e.message}"
+    if isinstance(e, errors.ServerError):
+        return f"Gemini indisponível no momento ({e.code}). Tente novamente."
+    return "Falha inesperada ao falar com o Gemini."
+
+
+def stream_gemini(model: str, image: bytes, media_type: str, instruction: str):
+    """Gera linhas NDJSON: {"delta": "..."} ... e por fim {"done": true, ...} ou {"error": "..."}."""
+    from google.genai import errors, types
+
+    contents = [types.Part.from_bytes(data=image, mime_type=media_type), instruction]
+    for thinking in (True, False):
+        sent = False
+        try:
+            usage = None
+            stream = gemini_client().models.generate_content_stream(
+                model=model, contents=contents, config=_gemini_config(thinking)
+            )
+            for chunk in stream:
+                if chunk.usage_metadata:
+                    usage = chunk.usage_metadata
+                text = chunk.text
+                if text:
+                    sent = True
+                    yield _line({"delta": text})
+            if not sent:
+                yield _line({"error": "O Gemini não devolveu texto para esta imagem."})
+                return
+            yield _line({
+                "done": True,
+                "model": model,
+                "input_tokens": (usage.prompt_token_count or 0) if usage else 0,
+                "output_tokens": (usage.candidates_token_count or 0) if usage else 0,
+            })
+            return
+        except errors.ClientError as e:
+            # Alguns modelos não aceitam thinking_level: tenta de novo sem ele.
+            if e.code == 400 and thinking and not sent:
+                continue
+            yield _line({"error": _gemini_error(e, model), "status": e.code})
+            return
+        except Exception as e:  # noqa: BLE001 — qualquer falha vira mensagem para a interface
+            yield _line({"error": _gemini_error(e, model)})
+            return
+
+
+def _line(obj: dict) -> bytes:
+    return (json.dumps(obj, ensure_ascii=False) + "\n").encode("utf-8")
+
+
 # ---------------------------------------------------------------- Claude
 def ocr_claude(model: str, image_b64: str, media_type: str, instruction: str) -> tuple[str, int, int]:
     import anthropic
@@ -227,8 +302,8 @@ def list_models():
     return {"default": default, "models": models}
 
 
-@app.post("/api/ocr", response_model=OcrResponse)
-def ocr(req: OcrRequest):
+def _prepare(req: OcrRequest) -> tuple[str, bytes, str]:
+    """Valida a requisição e devolve (modelo, bytes da imagem, instrução)."""
     if not (GEMINI_KEY or ANTHROPIC_KEY):
         raise HTTPException(401, "Nenhuma chave configurada: defina GEMINI_API_KEY e reinicie o servidor.")
     if req.media_type not in ALLOWED_MEDIA:
@@ -237,22 +312,51 @@ def ocr(req: OcrRequest):
         image = base64.b64decode(req.image, validate=True)
     except Exception:
         raise HTTPException(400, "Imagem inválida.")
-
     model = req.model or list_models()["default"]
+    if model.startswith("claude-") and not (ANTHROPIC_KEY and model in CLAUDE_MODELS):
+        raise HTTPException(400, "Modelo Claude indisponível (sem ANTHROPIC_API_KEY).")
+    if model.startswith("gemini-") and not GEMINI_KEY:
+        raise HTTPException(400, "Modelo Gemini indisponível (sem GEMINI_API_KEY).")
+    if not model.startswith(("claude-", "gemini-")):
+        raise HTTPException(400, "Modelo não suportado.")
     instruction = "Transcreva a matemática desta imagem."
     if req.hint:
         instruction += f"\nContexto fornecido pelo usuário: {req.hint.strip()[:500]}"
+    return model, image, instruction
+
+
+@app.post("/api/ocr/stream")
+def ocr_stream(req: OcrRequest):
+    """Mesma coisa que /api/ocr, mas devolve o texto aos poucos (NDJSON)."""
+    model, image, instruction = _prepare(req)
+
+    def gen():
+        if model.startswith("gemini-"):
+            yield from stream_gemini(model, image, req.media_type, instruction)
+            return
+        try:
+            text, tin, tout = ocr_claude(model, req.image, req.media_type, instruction)
+        except HTTPException as e:
+            yield _line({"error": e.detail, "status": e.status_code})
+            return
+        yield _line({"delta": text})
+        yield _line({"done": True, "model": model, "input_tokens": tin, "output_tokens": tout})
+
+    return StreamingResponse(
+        gen(),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.post("/api/ocr", response_model=OcrResponse)
+def ocr(req: OcrRequest):
+    model, image, instruction = _prepare(req)
 
     if model.startswith("claude-"):
-        if not ANTHROPIC_KEY or model not in CLAUDE_MODELS:
-            raise HTTPException(400, "Modelo Claude indisponível (sem ANTHROPIC_API_KEY).")
         text, tin, tout = ocr_claude(model, req.image, req.media_type, instruction)
-    elif model.startswith("gemini-"):
-        if not GEMINI_KEY:
-            raise HTTPException(400, "Modelo Gemini indisponível (sem GEMINI_API_KEY).")
-        text, tin, tout = ocr_gemini(model, image, req.media_type, instruction)
     else:
-        raise HTTPException(400, "Modelo não suportado.")
+        text, tin, tout = ocr_gemini(model, image, req.media_type, instruction)
 
     text = text.strip()
     fence = re.fullmatch(r"```[a-zA-Z]*\n?([\s\S]*?)\n?```", text)

@@ -2,9 +2,13 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>math2big</title>
+<meta name="description" content="Foto de matemática para LaTeX em segundos.">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230a0a0a'/><text x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='serif'>∑</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
@@ -12,61 +16,201 @@
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
+
+<!-- Ícones -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.9 1 6.7 2.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+  <symbol id="i-crop" viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20z" fill="currentColor"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-maximize" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/></symbol>
+  <symbol id="i-word" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="m7 8 1.6 8L12 10l3.4 6L17 8"/></symbol>
+</svg>
+
 <header class="top">
-  <div class="brand"><span class="logo">∑</span> math2big</div>
+  <a class="brand" href="/" aria-label="math2big — início"><span class="logo">∑</span><span>math2big</span></a>
   <div class="top-actions">
-    <select id="model" aria-label="Modelo"></select>
-    <button id="theme" class="icon-btn" title="Alternar tema" aria-label="Alternar tema">◐</button>
+    <label class="select-wrap" title="Modelo usado no reconhecimento">
+      <span class="sr-only">Modelo</span>
+      <select id="model"></select>
+      <svg class="i i-sm"><use href="#i-chevron"/></svg>
+    </label>
+    <button class="icon-btn" id="btn-history" title="Histórico (H)" aria-label="Histórico"><svg class="i"><use href="#i-history"/></svg></button>
+    <button class="icon-btn" id="btn-help" title="Atalhos (?)" aria-label="Ajuda e atalhos"><svg class="i"><use href="#i-help"/></svg></button>
+    <button class="icon-btn" id="btn-theme" title="Alternar tema" aria-label="Alternar tema"><svg class="i"><use href="#i-contrast"/></svg></button>
   </div>
 </header>
 
-<main class="layout">
-  <section class="pane input-pane">
-    <label id="drop" class="drop" tabindex="0">
-      <input id="file" type="file" accept="image/*" hidden>
-      <div class="drop-empty">
-        <div class="drop-icon">⤓</div>
-        <p class="drop-title">Solte uma imagem aqui</p>
-        <p class="muted">ou clique para escolher · <kbd>Ctrl</kbd>+<kbd>V</kbd> para colar</p>
-      </div>
-      <img id="preview" alt="Imagem enviada" hidden>
-    </label>
-    <input id="hint" class="hint" type="text" placeholder="Contexto opcional (ex.: “cálculo II, integrais duplas”)">
-    <div class="row">
-      <button id="run" class="btn primary" disabled>Converter</button>
-      <button id="clear" class="btn ghost" disabled>Limpar</button>
+<input id="file" type="file" accept="image/*" multiple hidden>
+<input id="camera" type="file" accept="image/*" capture="environment" hidden>
+
+<main id="app" data-view="empty">
+  <!-- Estado inicial -->
+  <section class="hero" aria-labelledby="hero-title">
+    <h1 id="hero-title">Foto de matemática <span class="arrow">→</span> LaTeX</h1>
+    <p class="lead">Fotografe o caderno, a lousa ou a lista. Em segundos você tem o LaTeX pronto para colar no Overleaf, Word, Notion ou Obsidian.</p>
+
+    <button class="dropzone" id="dropzone" type="button">
+      <span class="dz-icon"><svg class="i i-lg"><use href="#i-upload"/></svg></span>
+      <span class="dz-title">Solte imagens aqui ou clique para escolher</span>
+      <span class="dz-sub">Várias páginas de uma vez · <kbd>Ctrl</kbd> <kbd>V</kbd> para colar um print</span>
+    </button>
+
+    <div class="hero-actions">
+      <button class="btn" id="btn-camera" type="button"><svg class="i"><use href="#i-camera"/></svg> Tirar foto</button>
+      <button class="btn ghost" id="btn-example" type="button"><svg class="i"><use href="#i-sparkle"/></svg> Testar com um exemplo</button>
     </div>
-    <div class="history-head">
-      <h2>Histórico</h2>
-      <button id="clear-history" class="link">apagar</button>
-    </div>
-    <ul id="history" class="history"></ul>
+
+    <ul class="features">
+      <li><strong>Manuscrito ou impresso</strong><span>Integrais, matrizes, sistemas, somatórios, demonstrações.</span></li>
+      <li><strong>Confira lado a lado</strong><span>Original e resultado juntos; trechos duvidosos ficam marcados.</span></li>
+      <li><strong>Exporta do seu jeito</strong><span>LaTeX, Markdown, Word (equações editáveis) ou arquivo .tex.</span></li>
+    </ul>
   </section>
 
-  <section class="pane output-pane">
-    <div class="tabs" role="tablist">
-      <button class="tab active" data-tab="render" role="tab">Visualizar</button>
-      <button class="tab" data-tab="source" role="tab">LaTeX</button>
-      <div class="spacer"></div>
-      <button id="copy-latex" class="btn small" disabled>Copiar LaTeX</button>
-      <button id="copy-md" class="btn small ghost" disabled>Copiar Markdown</button>
-    </div>
-    <div id="status" class="status" hidden></div>
-    <div id="render" class="render tab-panel">
-      <div class="placeholder">
-        <p class="big">$$\int_{-\infty}^{\infty} e^{-x^2}\,dx = \sqrt{\pi}$$</p>
-        <p class="muted">O resultado aparece aqui. Clique em qualquer fórmula para copiar só ela.</p>
+  <!-- Área de trabalho -->
+  <section class="work" aria-label="Área de trabalho">
+    <div class="col col-source">
+      <div class="pages" role="tablist" aria-label="Páginas" id="pages"></div>
+
+      <div class="panel viewer">
+        <div class="toolbar" id="viewer-tools">
+          <button class="tool" id="t-rotate" title="Girar 90° (R)"><svg class="i"><use href="#i-rotate"/></svg><span>Girar</span></button>
+          <button class="tool" id="t-crop" title="Recortar só a parte que interessa (C)"><svg class="i"><use href="#i-crop"/></svg><span>Recortar</span></button>
+          <button class="tool" id="t-rerun" title="Converter de novo (Ctrl+Enter)"><svg class="i"><use href="#i-refresh"/></svg><span>Reconverter</span></button>
+          <span class="grow"></span>
+          <button class="tool icon-only" id="t-zoom" title="Ampliar imagem" aria-label="Ampliar imagem"><svg class="i"><use href="#i-maximize"/></svg></button>
+          <button class="tool icon-only" id="t-remove" title="Remover página (Del)" aria-label="Remover página"><svg class="i"><use href="#i-trash"/></svg></button>
+        </div>
+        <div class="toolbar crop-bar" id="crop-tools" hidden>
+          <span class="crop-hint">Arraste sobre a imagem para marcar a área</span>
+          <span class="grow"></span>
+          <button class="btn small ghost" id="crop-cancel">Cancelar</button>
+          <button class="btn small primary" id="crop-apply" disabled><svg class="i i-sm"><use href="#i-check"/></svg> Recortar e converter</button>
+        </div>
+        <div class="stage" id="stage">
+          <div class="img-wrap" id="img-wrap">
+            <img id="source-img" alt="Imagem original">
+            <div class="crop-layer" id="crop-layer" hidden><div class="crop-box" id="crop-box" hidden></div></div>
+          </div>
+        </div>
+        <details class="hint-box">
+          <summary>Dar contexto ao reconhecimento</summary>
+          <input id="hint" type="text" placeholder="Ex.: álgebra linear, núcleo de transformações — ajuda em letras ambíguas">
+        </details>
       </div>
     </div>
-    <div class="tab-panel source-wrap" hidden>
-      <textarea id="source" spellcheck="false" placeholder="O LaTeX reconhecido aparece aqui — e você pode editar."></textarea>
-      <p class="muted small-note">Edite à vontade: a visualização atualiza na hora.</p>
+
+    <div class="col col-result">
+      <div class="panel result">
+        <div class="toolbar">
+          <div class="segmented" role="tablist" aria-label="Modo">
+            <button class="seg active" data-mode="view" role="tab"><svg class="i i-sm"><use href="#i-eye"/></svg> Visualizar</button>
+            <button class="seg" data-mode="edit" role="tab"><svg class="i i-sm"><use href="#i-edit"/></svg> Editar</button>
+          </div>
+          <button class="badge" id="unsure-badge" hidden><svg class="i i-sm"><use href="#i-alert"/></svg><span></span></button>
+          <span class="grow"></span>
+          <div class="actions">
+            <button class="btn small primary" id="a-copy" title="Copiar LaTeX (Ctrl+Shift+C)"><svg class="i i-sm"><use href="#i-copy"/></svg> <span>Copiar LaTeX</span></button>
+            <div class="menu-wrap">
+              <button class="btn small ghost" id="a-more" aria-haspopup="menu" aria-expanded="false">Exportar <svg class="i i-sm"><use href="#i-chevron"/></svg></button>
+              <div class="menu" id="export-menu" role="menu" hidden>
+                <div class="menu-label">Esta página</div>
+                <button role="menuitem" data-export="copy-md"><svg class="i i-sm"><use href="#i-copy"/></svg> Copiar Markdown</button>
+                <button role="menuitem" data-export="copy-word"><svg class="i i-sm"><use href="#i-word"/></svg> Copiar para Word</button>
+                <button role="menuitem" data-export="dl-tex"><svg class="i i-sm"><use href="#i-download"/></svg> Baixar .tex</button>
+                <button role="menuitem" data-export="dl-md"><svg class="i i-sm"><use href="#i-download"/></svg> Baixar .md</button>
+                <div class="menu-sep all-only"></div>
+                <div class="menu-label all-only">Todas as páginas</div>
+                <button role="menuitem" class="all-only" data-export="all-copy"><svg class="i i-sm"><use href="#i-copy"/></svg> Copiar tudo (Markdown)</button>
+                <button role="menuitem" class="all-only" data-export="all-tex"><svg class="i i-sm"><use href="#i-download"/></svg> Baixar documento .tex</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-body" id="result-body">
+          <div class="render" id="render" aria-live="polite"></div>
+          <div class="editor" id="editor" hidden>
+            <div class="editor-head">
+              <span>LaTeX / Markdown</span>
+              <button class="link-btn" id="e-restore" title="Voltar ao texto reconhecido"><svg class="i i-sm"><use href="#i-undo"/></svg> Restaurar original</button>
+            </div>
+            <textarea id="source" spellcheck="false" aria-label="Código LaTeX"></textarea>
+            <div class="editor-head"><span>Prévia</span></div>
+            <div class="render preview" id="preview"></div>
+          </div>
+        </div>
+        <footer class="meta" id="meta"></footer>
+      </div>
     </div>
-    <footer id="meta" class="meta"></footer>
   </section>
 </main>
 
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<!-- Histórico -->
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" aria-label="Histórico" hidden>
+  <div class="drawer-head">
+    <h2>Histórico</h2>
+    <button class="icon-btn" id="drawer-close" aria-label="Fechar"><svg class="i"><use href="#i-x"/></svg></button>
+  </div>
+  <label class="search">
+    <svg class="i i-sm"><use href="#i-search"/></svg>
+    <input id="h-search" type="search" placeholder="Buscar no histórico…">
+  </label>
+  <ul class="h-list" id="h-list"></ul>
+  <button class="link-btn danger" id="h-clear">Apagar todo o histórico</button>
+</aside>
+
+<!-- Ajuda -->
+<dialog id="help">
+  <div class="dialog-head">
+    <h2>Atalhos e dicas</h2>
+    <button class="icon-btn" data-close aria-label="Fechar"><svg class="i"><use href="#i-x"/></svg></button>
+  </div>
+  <dl class="keys">
+    <dt><kbd>Ctrl</kbd> <kbd>V</kbd></dt><dd>Colar print ou imagem</dd>
+    <dt><kbd>Ctrl</kbd> <kbd>Enter</kbd></dt><dd>Reconverter a página atual</dd>
+    <dt><kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>C</kbd></dt><dd>Copiar o LaTeX</dd>
+    <dt><kbd>E</kbd></dt><dd>Alternar Visualizar / Editar</dd>
+    <dt><kbd>R</kbd> · <kbd>C</kbd></dt><dd>Girar · Recortar</dd>
+    <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Página anterior / próxima</dd>
+    <dt><kbd>H</kbd></dt><dd>Abrir histórico</dd>
+  </dl>
+  <ul class="tips">
+    <li><strong>Foto torta ou com outras folhas?</strong> Use <em>Recortar</em>: o resultado fica bem mais preciso.</li>
+    <li><strong>Clique numa fórmula</strong> para copiar só ela. No menu dela há a opção para Word.</li>
+    <li><strong>Marcas <span class="unsure-sample">[?]</span></strong> indicam símbolos que o modelo não teve certeza — confira com o original.</li>
+    <li><strong>Copiar para Word</strong> cola como equação editável (MathML) no Word e no LibreOffice.</li>
+  </ul>
+</dialog>
+
+<!-- Ampliar imagem -->
+<div class="lightbox" id="lightbox" hidden><img id="lightbox-img" alt="Imagem ampliada"></div>
+
+<!-- Soltar arquivos -->
+<div class="drop-overlay" id="drop-overlay" hidden>
+  <div><svg class="i i-xl"><use href="#i-upload"/></svg><p>Solte para converter</p></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script src="/app.js"></script>
 </body>
 </html>

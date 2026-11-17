@@ -37,12 +37,13 @@ Interface em preto e branco (tema claro/escuro), funciona no desktop e no celula
 
 ## Como usar
 
-- Arraste a imagem, clique para escolher, ou cole com **Ctrl+V** (print direto do WhatsApp/Telegram funciona).
-- **Converter** (ou **Ctrl+Enter**).
-- **Visualizar**: clique em qualquer fórmula para copiar só o LaTeX dela.
-- **LaTeX**: edite o resultado; a visualização atualiza na hora.
-- **Copiar LaTeX** copia só as fórmulas; **Copiar Markdown** copia tudo (texto + `$…$`/`$$…$$`), pronto para Obsidian/Notion/Overleaf.
-- O histórico fica salvo no navegador.
+- **Envie** arrastando, clicando, colando com **Ctrl+V** ou tirando foto no celular. Várias páginas de uma vez: cada uma vira uma aba e a conversão começa sozinha.
+- **Acompanhe** o texto aparecendo em tempo real (streaming).
+- **Ajuste a foto**: *Girar* e *Recortar* (só a área que interessa) reconvertem automaticamente.
+- **Confira** original e resultado lado a lado; símbolos duvidosos aparecem marcados com `[?]` e o selo "trechos para conferir" leva até eles.
+- **Copie**: clique numa fórmula para copiar só ela; *Copiar LaTeX* copia todas; *Exportar* tem Markdown, **Word** (equação editável), `.tex` e `.md` — por página ou o documento inteiro.
+- **Edite** no modo *Editar* com prévia ao vivo e "Restaurar original".
+- **Histórico** com busca, salvo no navegador. Pressione **?** para ver os atalhos.
 
 ## Modelos
 
