@@ -14,6 +14,7 @@ const CONCURRENCY = 2;
 const HISTORY_KEY = "math2big.history.v2";
 const THEME_KEY = "math2big.theme";
 const MODEL_KEY = "math2big.model";
+const CLIENT_KEY = "math2big.client";
 const HISTORY_MAX = 40;
 
 const els = {
@@ -54,6 +55,26 @@ function toast(msg, ic = "check") {
   toastTimer = setTimeout(() => els.toast.classList.remove("show"), 1800);
 }
 
+/* ---------------- uso (registro anônimo no servidor) ---------------- */
+const clientId = (() => {
+  let id = store.get(CLIENT_KEY, null);
+  if (!id) { id = crypto.randomUUID?.() || `c${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`; store.set(CLIENT_KEY, id); }
+  return id;
+})();
+
+function track(kind, page = activePage(), detail = null) {
+  const body = JSON.stringify({ kind, client_id: clientId, request_id: page?.recordId || null, detail });
+  fetch("/api/events", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+}
+
+const pushEdit = debounce((page) => {
+  if (!page.recordId) return;
+  fetch(`/api/ocr/${page.recordId}`, {
+    method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ client_id: clientId, content: page.content }), keepalive: true,
+  }).catch(() => {});
+}, 1500);
+
 function cleanFences(text) {
   const t = text.trim();
   const m = t.match(/^```[a-zA-Z]*\n?([\s\S]*?)\n?```$/);
@@ -69,7 +90,8 @@ els.btnTheme.onclick = () => {
   applyTheme(next); store.set(THEME_KEY, next);
 };
 
-fetch("/api/models").then((r) => r.json()).then(({ default: def, models }) => {
+fetch("/api/models").then((r) => r.json()).then(({ default: def, models, notice }) => {
+  if (notice) setTimeout(() => toast(notice, "alert"), 300);
   const saved = store.get(MODEL_KEY, def);
   for (const m of models) {
     const o = new Option(m.label, m.id, false, m.id === saved);
@@ -77,7 +99,7 @@ fetch("/api/models").then((r) => r.json()).then(({ default: def, models }) => {
   }
   if (!models.length) els.model.append(new Option("Nenhum modelo configurado", ""));
 }).catch(() => els.model.append(new Option("Servidor indisponível", "")));
-els.model.onchange = () => { store.set(MODEL_KEY, els.model.value); toast("Modelo alterado — vale para as próximas conversões"); };
+els.model.onchange = () => { store.set(MODEL_KEY, els.model.value); track("model_change", null, { model: els.model.value }); toast("Modelo alterado — vale para as próximas conversões"); };
 
 /* ---------------- imagens ---------------- */
 function loadImage(src) {
@@ -109,7 +131,7 @@ function refreshPageImage(page) {
   page.thumb = drawToCanvas(page.canvas, 400).toDataURL("image/jpeg", 0.72);
 }
 
-async function addFiles(fileList) {
+async function addFiles(fileList, source = "upload") {
   const files = [...fileList].filter((f) => f && f.type.startsWith("image/"));
   if (!files.length) return toast("Nenhuma imagem encontrada", "alert");
   let first = null;
@@ -118,6 +140,7 @@ async function addFiles(fileList) {
     try {
       const img = await loadImage(url);
       const page = newPage(drawToCanvas(img, MAX_SOURCE_SIDE));
+      page.source = source; page.batchSize = files.length;
       state.pages.push(page);
       first ??= page;
       enqueue(page);
@@ -135,7 +158,7 @@ function newPage(canvas) {
   const page = {
     id: `p${++seq}`, canvas, display: "", thumb: "", status: "idle",
     content: "", original: "", partial: "", error: null, errorStatus: null, meta: null,
-    startedAt: 0, controller: null, historyId: null,
+    startedAt: 0, controller: null, historyId: null, recordId: null, source: null, batchSize: 1,
   };
   refreshPageImage(page);
   return page;
@@ -162,7 +185,12 @@ async function convert(page) {
   renderAll();
 
   const { b64, mediaType } = encodeForModel(page.canvas);
-  const body = JSON.stringify({ image: b64, media_type: mediaType, model: els.model.value || null, hint: els.hint.value.trim() || null });
+  const body = JSON.stringify({
+    image: b64, media_type: mediaType, model: els.model.value || null, hint: els.hint.value.trim() || null,
+    client_id: clientId, width: page.canvas.width, height: page.canvas.height,
+    batch_size: page.batchSize, source: page.source || "rerun",
+  });
+  page.source = null;  // próximas conversões sem origem nova contam como reconversão
   let done = null, failure = null;
 
   try {
@@ -202,6 +230,7 @@ async function convert(page) {
   } else {
     page.status = "done";
     page.content = page.original = cleanFences(page.partial);
+    page.recordId = done?.id || null;
     const secs = ((performance.now() - page.startedAt) / 1000).toFixed(1);
     page.meta = { model: done?.model || els.model.value, secs };
     saveToHistory(page);
@@ -456,16 +485,16 @@ els.render.addEventListener("click", (e) => {
   if (btn && block) {
     e.stopPropagation();
     const tex = block.dataset.tex;
-    if (btn.dataset.act === "copy") copyText(tex, "Fórmula copiada");
-    if (btn.dataset.act === "word") copyWord([{ type: "math", value: tex }], "Fórmula copiada para o Word");
+    if (btn.dataset.act === "copy") { copyText(tex, "Fórmula copiada"); track("copy_formula", page); }
+    if (btn.dataset.act === "word") { copyWord([{ type: "math", value: tex }], "Fórmula copiada para o Word"); track("copy_word_formula", page); }
     if (btn.dataset.act === "edit") { setMode("edit"); focusInEditor(page, tex); }
     return;
   }
-  if (block?.dataset.tex) { copyText(block.dataset.tex, "Fórmula copiada"); block.classList.remove("flash"); void block.offsetWidth; block.classList.add("flash"); return; }
+  if (block?.dataset.tex) { copyText(block.dataset.tex, "Fórmula copiada"); track("copy_formula", page); block.classList.remove("flash"); void block.offsetWidth; block.classList.add("flash"); return; }
   const inline = e.target.closest("p .katex");
   if (inline) {
     const tex = inline.querySelector('annotation[encoding="application/x-tex"]')?.textContent;
-    if (tex) copyText(tex.replace(/\\htmlClass\{unsure\}\{(\\text\{\[\?\]\})\}/g, "$1"), "Trecho copiado");
+    if (tex) copyText(tex.replace(/\\htmlClass\{unsure\}\{(\\text\{\[\?\]\})\}/g, "$1"), "Trecho copiado"), track("copy_inline", page);
   }
 });
 
@@ -498,11 +527,12 @@ const syncEdit = debounce(() => {
   els.unsure.hidden = !n;
   if (n) $("span", els.unsure).textContent = n === 1 ? "1 trecho para conferir" : `${n} trechos para conferir`;
   saveToHistory(page);
+  pushEdit(page);
 }, 140);
 els.source.addEventListener("input", () => { const page = activePage(); if (page) { page.content = els.source.value; syncEdit(); } });
 els.restore.onclick = () => {
   const page = activePage(); if (!page) return;
-  page.content = page.original; els.source.value = page.content; syncEdit(); toast("Texto original restaurado", "undo");
+  page.content = page.original; els.source.value = page.content; syncEdit(); track("edit_restore", page); toast("Texto original restaurado", "undo");
 };
 
 els.unsure.onclick = () => {
@@ -592,6 +622,7 @@ function copyLatex() {
   if (page?.status !== "done") return;
   const n = countFormulas(page.content);
   copyText(formulasOf(page.content), n > 1 ? `${n} fórmulas copiadas` : "LaTeX copiado");
+  track("copy_all", page, { formulas: n });
 }
 els.aCopy.onclick = copyLatex;
 
@@ -610,6 +641,8 @@ els.menu.addEventListener("click", (e) => {
   const page = activePage();
   const n = pageIndex(page) + 1;
   const done = state.pages.filter((p) => p.status === "done");
+  const kinds = { "copy-md": "export_md", "copy-word": "copy_word", "dl-tex": "download_tex", "dl-md": "download_md", "all-copy": "export_md", "all-tex": "export_tex" };
+  track(kinds[item.dataset.export] || "export_md", page, { option: item.dataset.export, pages: item.dataset.export.startsWith("all") ? done.length : 1 });
   switch (item.dataset.export) {
     case "copy-md": return copyText(page.content, "Markdown copiado");
     case "copy-word": return copyWord(segments(page.content), "Copiado — cole no Word");
@@ -632,10 +665,11 @@ els.tRotate.onclick = () => {
   page.canvas = c; refreshPageImage(page);
   renderPages(); renderViewer();
   toast("Imagem girada — reconvertendo…", "rotate");
+  track("rotate", page); page.source = "rotate";
   rerunSoon(page);
 };
 
-els.tRerun.onclick = () => { const page = activePage(); if (page && page.status !== "running") enqueue(page); };
+els.tRerun.onclick = () => { const page = activePage(); if (page && page.status !== "running") { track("rerun", page); page.source = "rerun"; enqueue(page); } };
 els.tRemove.onclick = () => removePage(activePage());
 els.tCrop.onclick = () => (state.cropping ? exitCrop() : enterCrop());
 
@@ -686,6 +720,7 @@ els.cropApply.onclick = () => {
   c.getContext("2d").drawImage(page.canvas, sx, sy, sw, sh, 0, 0, sw, sh);
   page.canvas = c; refreshPageImage(page);
   exitCrop();
+  track("crop", page); page.source = "crop";
   enqueue(page);
   toast("Recortado — convertendo só essa área", "crop");
 };
@@ -703,7 +738,7 @@ function saveToHistory(page) {
   if (page.status !== "done") return;
   const list = store.get(HISTORY_KEY, []);
   page.historyId ??= `h${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
-  const entry = { id: page.historyId, ts: Date.now(), thumb: page.thumb, content: page.content, model: page.meta?.model };
+  const entry = { id: page.historyId, ts: Date.now(), thumb: page.thumb, content: page.content, original: page.original, model: page.meta?.model, recordId: page.recordId };
   const i = list.findIndex((h) => h.id === entry.id);
   if (i >= 0) list.splice(i, 1);
   list.unshift(entry);
@@ -738,7 +773,8 @@ async function openFromHistory(h) {
   if (existing) { select(existing.id); closeDrawer(); return; }
   const img = await loadImage(h.thumb);
   const page = newPage(drawToCanvas(img, MAX_SOURCE_SIDE));
-  Object.assign(page, { status: "done", content: h.content, original: h.content, historyId: h.id, meta: { model: h.model } });
+  Object.assign(page, { status: "done", content: h.content, original: h.original ?? h.content, historyId: h.id, recordId: h.recordId || null, meta: { model: h.model } });
+  track("history_open", page);
   state.pages.push(page);
   select(page.id);
   closeDrawer();
@@ -760,10 +796,10 @@ els.help.addEventListener("click", (e) => { if (e.target === els.help || e.targe
 els.dropzone.onclick = () => els.file.click();
 els.btnCamera.onclick = () => els.camera.click();
 els.file.onchange = () => { addFiles(els.file.files); els.file.value = ""; };
-els.camera.onchange = () => { addFiles(els.camera.files); els.camera.value = ""; };
+els.camera.onchange = () => { addFiles(els.camera.files, "camera"); els.camera.value = ""; };
 els.btnExample.onclick = async () => {
   const blob = await (await fetch("/exemplo.png")).blob();
-  addFiles([new File([blob], "exemplo.png", { type: "image/png" })]);
+  addFiles([new File([blob], "exemplo.png", { type: "image/png" })], "example");
 };
 
 let dragDepth = 0;
@@ -774,11 +810,11 @@ window.addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth =
 window.addEventListener("drop", (e) => {
   if (!hasFiles(e)) return;
   e.preventDefault(); dragDepth = 0; els.dropOverlay.hidden = true;
-  addFiles(e.dataTransfer.files);
+  addFiles(e.dataTransfer.files, "drop");
 });
 window.addEventListener("paste", (e) => {
   const files = [...(e.clipboardData?.items || [])].filter((i) => i.type.startsWith("image/")).map((i) => i.getAsFile());
-  if (files.length) { e.preventDefault(); addFiles(files); }
+  if (files.length) { e.preventDefault(); addFiles(files, "paste"); }
 });
 
 /* ---------------- teclado ---------------- */

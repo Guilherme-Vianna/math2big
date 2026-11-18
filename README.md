@@ -58,8 +58,32 @@ A imagem é enviada em alta resolução e o modelo roda com raciocínio baixo
 
 Opcional: com `ANTHROPIC_API_KEY` no `.env`, os modelos Claude também aparecem na lista.
 
+## Registro de uso e painel `/admin`
+
+Com um Postgres configurado (ex.: [Neon](https://neon.tech)), cada conversão é registrada:
+texto devolvido (Markdown + LaTeX), só as fórmulas, a versão editada pelo usuário, modelo,
+tokens (entrada, saída e raciocínio), tempo total e até o primeiro texto, tamanho/dimensões da
+imagem, origem (arquivo, câmera, colar…), erros, um id anônimo do navegador e o IP em hash.
+Ações como copiar, exportar, girar e recortar também viram eventos. As tabelas são criadas sozinhas.
+
+```
+DATABASE_URL=postgresql://...      # sem ele o app funciona, só não registra
+ADMIN_PASSWORD=uma-senha-forte     # sem ele o painel fica desativado
+ADMIN_SECRET=uma-chave-aleatoria   # assina a sessão do painel
+```
+
+Em `/admin` você vê métricas por período (conversões, erros, tokens, tempo p50/p95, usuários,
+taxa de edição), gráficos por dia, consumo por modelo, busca e filtro de cada conversão com o
+resultado renderizado, exportação CSV, e controla o app: ligar/desligar o registro, não guardar
+o texto (privacidade), escolher o modelo padrão, esconder modelos, pausar o OCR com uma
+mensagem de manutenção e apagar dados antigos.
+
 ## Estrutura
 
+- `server.py` — ponto de entrada (`uvicorn server:app`, Vercel).
+- `backend/providers.py` — Gemini / Claude com streaming e contagem de tokens.
+- `backend/ocr.py` — rotas públicas (`/api/models`, `/api/ocr`, `/api/ocr/stream`, `/api/events`).
+- `backend/admin.py` — API do painel (`/api/admin/*`).
+- `backend/db.py` — Postgres: conversões, eventos e configurações.
+- `public/` — interface (HTML/CSS/JS puro, KaTeX) e o painel (`admin.html`).
 - `Dockerfile`, `docker-compose.yml` — imagem Python 3.13 slim + Uvicorn na porta 8765.
-- `server.py` — API FastAPI (`POST /api/ocr`, `GET /api/models`).
-- `static/` — interface (HTML/CSS/JS puro, KaTeX para renderizar).
