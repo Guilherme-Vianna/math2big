@@ -7,3 +7,5 @@ __pycache__/
 *.ps1
 Dockerfile
 docker-compose.yml
+.env.*
+!.env.example
